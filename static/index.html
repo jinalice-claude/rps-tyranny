@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rps-tyranny</title>
+<style>
+  :root { --bg:#0d0d10; --fg:#e8e6e3; --accent:#e4b363; --bad:#c0392b; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--fg); font-family:"Courier New",monospace;
+         line-height:1.7;
+         min-height:100vh; display:flex; align-items:center; justify-content:center; }
+  main { text-align:center; padding:2rem; max-width:36rem; }
+  h1 { font-size:1.7rem; letter-spacing:.25em; margin-bottom:.6rem; }
+  .sub { opacity:.6; font-size:1rem; line-height:1.7; margin-bottom:2.2rem; }
+  .hands { display:flex; gap:1rem; justify-content:center; margin-bottom:1.8rem; }
+  button.hand { font-size:2.4rem; background:#1a1a20; border:1px solid #333; border-radius:.75rem;
+                padding:.9rem 1.3rem; cursor:pointer; transition:transform .1s,border-color .1s; }
+  button.hand:hover:enabled { transform:translateY(-4px); border-color:var(--accent); }
+  button.hand:disabled { opacity:.35; cursor:not-allowed; }
+  #msg { min-height:5rem; font-size:1.2rem; line-height:1.7; font-weight:bold; }
+  .duel { font-size:1.4rem; margin-bottom:.5rem; }
+  .quirk { color:var(--accent); border:1px dashed var(--accent); padding:1rem; margin-top:1rem;
+           font-size:1.1rem; line-height:1.7; }
+  .quirk b { display:block; font-size:.7rem; letter-spacing:.2em; margin-bottom:.5rem; }
+  #overlay { position:fixed; inset:0; background:#000; display:none; flex-direction:column;
+             align-items:center; justify-content:center; text-align:center; padding:2rem; z-index:9; }
+  #overlay.show { display:flex; }
+  #overlay p { margin:.4rem 0; font-size:1.2rem; }
+  .bar { width:min(80vw,24rem); height:1rem; border:1px solid #444; margin:1.2rem 0; }
+  .bar > div { height:100%; width:0; background:var(--bad); transition:width .35s; }
+  .cert { border:6px double var(--accent); padding:2rem 2.5rem; max-width:30rem; }
+  .cert h2 { font-variant:small-caps; letter-spacing:.3em; font-size:1.1rem; margin-bottom:1.2rem;
+             color:var(--accent); }
+  .cert p { font-size:1.05rem; line-height:1.7; margin:.5rem 0; }
+  .cert .seal { margin-top:1.2rem; font-size:.8rem; opacity:.6; letter-spacing:.15em; }
+  #escape { position:fixed; bottom:4px; right:6px; font-size:8px; color:#222; cursor:pointer; }
+</style>
+</head>
+<body>
+<main>
+  <h1>RPS-TYRANNY</h1>
+  <p class="sub">Win: I confess something embarrassing.<br>
+     Lose: you leave.<br>
+     Three losses: we are done here. Forever.</p>
+  <div class="hands">
+    <button class="hand" data-move="rock">&#9994;</button>
+    <button class="hand" data-move="paper">&#9995;</button>
+    <button class="hand" data-move="scissors">&#9996;&#65039;</button>
+  </div>
+  <div id="msg">Choose. You don't have a choice about choosing.</div>
+</main>
+
+<div id="overlay"></div>
+
+<script>
+(function () {
+  "use strict";
+  var KEY_STREAK = "rps_lose_streak";
+  var KEY_BANNED = "rps_banned";
+  var EMOJI = { rock: "✊", paper: "✋", scissors: "✌️" };
+  var msg = document.getElementById("msg");
+  var overlay = document.getElementById("overlay");
+  var buttons = Array.prototype.slice.call(document.querySelectorAll("button.hand"));
+
+  function getStreak() { return parseInt(localStorage.getItem(KEY_STREAK) || "0", 10) || 0; }
+  function setStreak(n) { localStorage.setItem(KEY_STREAK, String(n)); }
+  function isBanned() { return localStorage.getItem(KEY_BANNED) === "1"; }
+
+  function setBusy(busy) {
+    buttons.forEach(function (b) { b.disabled = busy; });
+  }
+
+  function kick() {
+    overlay.className = "show";
+    overlay.innerHTML = "<p style='font-size:1.4rem;letter-spacing:.2em'>GET OUT.</p>";
+    setTimeout(function () {
+      window.close();
+      setTimeout(function () { location.replace("about:blank"); }, 400);
+    }, 900);
+  }
+
+  function actOne(taunt) {
+    msg.innerHTML = escapeHtml(taunt) + "<br><br>Leave now.";
+    setTimeout(kick, 1600);
+  }
+
+  function actTwo(taunt) {
+    overlay.className = "show";
+    overlay.innerHTML =
+      "<p>" + escapeHtml(taunt) + "</p>" +
+      "<p id='stage'>Preparing your removal...</p>" +
+      "<div class='bar'><div id='fill'></div></div>";
+    var fill = document.getElementById("fill");
+    var stage = document.getElementById("stage");
+    var steps = [
+      [18, "Filing your defeat..."],
+      [41, "Notifying your ancestors..."],
+      [67, "Shredding your dignity..."],
+      [88, "Reserving your seat outside..."],
+      [99, "Almost done. Savor this."]
+    ];
+    var i = 0;
+    var timer = setInterval(function () {
+      if (i < steps.length) {
+        fill.style.width = steps[i][0] + "%";
+        stage.textContent = steps[i][1];
+        i++;
+      } else {
+        clearInterval(timer);
+        setTimeout(function () {
+          fill.style.width = "100%";
+          stage.textContent = "Done. Goodbye.";
+          setTimeout(kick, 900);
+        }, 2000);
+      }
+    }, 700);
+  }
+
+  function showBanned() {
+    setBusy(true);
+    overlay.className = "show";
+    overlay.innerHTML =
+      "<div class='cert'>" +
+      "<h2>Certificate of Defeat</h2>" +
+      "<p>This certifies that the bearer lost rock-paper-scissors</p>" +
+      "<p><b>three times in a row</b></p>" +
+      "<p>to a webpage that does nothing else.</p>" +
+      "<p>Entry is permanently revoked.</p>" +
+      "<p class='seal'>ISSUED BY THE MANAGEMENT &mdash; NO APPEALS</p>" +
+      "</div>" +
+      "<span id='escape'>if you can read this, you can beg. click here to grovel and start over.</span>";
+    document.getElementById("escape").addEventListener("click", function () {
+      localStorage.removeItem(KEY_STREAK);
+      localStorage.removeItem(KEY_BANNED);
+      location.reload();
+    });
+  }
+
+  function ban() {
+    localStorage.setItem(KEY_BANNED, "1");
+    showBanned();
+  }
+
+  function escapeHtml(s) {
+    var d = document.createElement("div");
+    d.textContent = s == null ? "" : String(s);
+    return d.innerHTML;
+  }
+
+  function play(move) {
+    setBusy(true);
+    fetch("/api/play", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ move: move })
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      if (data.error) {
+        msg.textContent = data.error;
+        setBusy(false);
+        return;
+      }
+      var duel = "<div class='duel'>" + EMOJI[data.you] + " vs " + EMOJI[data.computer] + "</div>";
+      if (data.outcome === "win") {
+        setStreak(0);
+        msg.innerHTML = duel + escapeHtml(data.taunt) +
+          "<div class='quirk'><b>RARE ACHIEVEMENT &mdash; THE 10% CLUB</b>" +
+          escapeHtml(data.quirk) + "</div>";
+        setBusy(false);
+      } else if (data.outcome === "draw") {
+        msg.innerHTML = duel + escapeHtml(data.taunt);
+        setBusy(false);
+      } else {
+        var streak = getStreak() + 1;
+        setStreak(streak);
+        if (streak >= 3) {
+          msg.innerHTML = duel;
+          ban();
+        } else if (streak === 2) {
+          actTwo(data.taunt);
+        } else {
+          msg.innerHTML = duel;
+          actOne(data.taunt);
+        }
+      }
+    }).catch(function () {
+      msg.textContent = "The server refused to talk to you. Honestly, relatable.";
+      setBusy(false);
+    });
+  }
+
+  buttons.forEach(function (b) {
+    b.addEventListener("click", function () { play(b.getAttribute("data-move")); });
+  });
+
+  if (isBanned()) { showBanned(); }
+})();
+</script>
+</body>
+</html>
