@@ -11,7 +11,7 @@ HOST = os.environ.get("RPS_HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", "8000"))
 BASE_DIR = Path(__file__).resolve().parent
 INDEX_FILE = BASE_DIR / "static" / "index.html"
-QUIRKS_FILE = BASE_DIR / "quirks.txt"
+QUIRKS_FILE = Path(os.environ.get("QUIRKS_PATH") or BASE_DIR / "quirks.txt")
 QUIRK_TOKEN = os.environ.get("RPS_QUIRK_TOKEN", "")
 
 WIN_CHANCE = 0.10
