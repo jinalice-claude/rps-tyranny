@@ -202,9 +202,15 @@ class Handler(BaseHTTPRequestHandler):
         except UnicodeEncodeError:
             self._send_json(400, {"error": "That wasn't even valid text. The vault rejects gibberish."})
             return
-        with _lock:
-            with QUIRKS_FILE.open("a", encoding="utf-8") as f:
-                f.write(quirk + "\n")
+        try:
+            with _lock:
+                QUIRKS_FILE.parent.mkdir(parents=True, exist_ok=True)
+                with QUIRKS_FILE.open("a", encoding="utf-8") as f:
+                    f.write(quirk + "\n")
+        except OSError as e:
+            print(f"quirks write failed: {e!r} (path: {QUIRKS_FILE})", flush=True)
+            self._send_json(500, {"error": "The vault door is jammed. The management has been notified and does not care."})
+            return
         self._send_json(200, {"ok": True})
 
 
