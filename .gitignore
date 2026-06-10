@@ -1,0 +1,4 @@
+quirks.txt
+.env
+__pycache__/
+.claude/
