@@ -197,6 +197,11 @@ class Handler(BaseHTTPRequestHandler):
         if not quirk or len(quirk) > MAX_QUIRK_LENGTH:
             self._send_json(400, {"error": "One quirk, plain text, under 500 characters."})
             return
+        try:
+            quirk.encode("utf-8")
+        except UnicodeEncodeError:
+            self._send_json(400, {"error": "That wasn't even valid text. The vault rejects gibberish."})
+            return
         with _lock:
             with QUIRKS_FILE.open("a", encoding="utf-8") as f:
                 f.write(quirk + "\n")
